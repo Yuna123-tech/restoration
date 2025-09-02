@@ -166,6 +166,7 @@
         }
         .highlight {
             border: 2px dashed #ff0000;
+            filter: drop-shadow(0 0 5px #ff0000);
         }
     </style>
 </head>
@@ -229,6 +230,14 @@
                 고려청자만의 독특하고 뛰어난 기술입니다.
             </p>
         </div>
+        <div class="mt-8 text-left w-full">
+            <h3 class="text-2xl font-bold mb-2 text-center">더 알아보기: 관련 영상</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><a href="https://youtu.be/Vkoc66Q7s8k?si=i3igvSezoBGw1l0g" target="_blank" class="text-blue-600 hover:underline">천하제일의 고려청자, 어떻게 만들어질까? (KBS HISTORY)</a></li>
+                <li><a href="https://youtu.be/KP3BCvN_EgM?si=uXNap5SEnFHCEJxt" target="_blank" class="text-blue-600 hover:underline">고려청자, 천년의 신비 (국립중앙박물관)</a></li>
+                <li><a href="https://youtu.be/T6CUz6ClJug?si=Xty8bok79G_U1oW8" target="_blank" class="text-blue-600 hover:underline">13~14세기 고려청자 (국립중앙박물관)</a></li>
+            </ul>
+        </div>
         <button id="restart-btn" class="btn btn-primary mt-8">다시 시작하기</button>
     </div>
 </div>
@@ -273,7 +282,6 @@
         
         let currentStage = 1;
         
-        // ** 추가된 변수: 현재 드래그 중인 조각을 추적합니다. **
         let currentDraggingPiece = null;
         let startX, startY;
 
@@ -292,14 +300,12 @@
 
         window.addEventListener('resize', setCanvasSize);
         
-        // 고려청자 본체와 문양을 그리는 함수
         function drawCeladonBase(ctx, scale, centerX, centerY, drawBroken = false) {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             
             ctx.fillStyle = celadonColor;
             
             ctx.beginPath();
-            // 좌측 윤곽선 (베지어 곡선)
             ctx.moveTo(centerX - scale * 0.25, centerY + scale * 0.45);
             ctx.bezierCurveTo(
                 centerX - scale * 0.4, centerY + scale * 0.1,
@@ -312,7 +318,6 @@
                 centerX - scale * 0.1, centerY - scale * 0.7
             );
             
-            // 우측 윤곽선 (베지어 곡선)
             ctx.lineTo(centerX + scale * 0.1, centerY - scale * 0.7);
             ctx.bezierCurveTo(
                 centerX + scale * 0.05, centerY - scale * 0.6,
@@ -327,61 +332,50 @@
             ctx.closePath();
             ctx.fill();
 
-            // 바닥 부분
             ctx.beginPath();
             ctx.ellipse(centerX, centerY + scale * 0.45, scale * 0.25, scale * 0.05, 0, 0, 2 * Math.PI);
             ctx.fill();
 
-            // 윗 부분
             ctx.beginPath();
             ctx.ellipse(centerX, centerY - scale * 0.7, scale * 0.1, scale * 0.02, 0, 0, 2 * Math.PI);
             ctx.fill();
 
             if (drawBroken) {
-                // 깨진 조각을 그리는 부분 (빈 공간)
                 ctx.globalCompositeOperation = 'destination-out';
                 
-                // Piece 1 Hole
+                // --- 수정된 깨진 부분 ---
+                // Hole 1 (Top Left Square)
                 ctx.beginPath();
-                ctx.moveTo(centerX - scale * 0.2, centerY - scale * 0.1);
-                ctx.lineTo(centerX - scale * 0.25, centerY - scale * 0.05);
-                ctx.lineTo(centerX - scale * 0.2, centerY + scale * 0.05);
-                ctx.lineTo(centerX - scale * 0.1, centerY);
+                ctx.rect(centerX - scale * 0.35, centerY - scale * 0.25, scale * 0.1, scale * 0.1);
+                ctx.fill();
+
+                // Hole 2 (Middle Right Triangle)
+                ctx.beginPath();
+                ctx.moveTo(centerX + scale * 0.2, centerY + scale * 0.05);
+                ctx.lineTo(centerX + scale * 0.3, centerY + scale * 0.15);
+                ctx.lineTo(centerX + scale * 0.2, centerY + scale * 0.15);
                 ctx.closePath();
                 ctx.fill();
 
-                // Piece 2 Hole
+                // Hole 3 (Bottom Left Trapezoid)
                 ctx.beginPath();
-                ctx.moveTo(centerX + scale * 0.1, centerY);
-                ctx.lineTo(centerX + scale * 0.2, centerY + scale * 0.1);
-                ctx.lineTo(centerX + scale * 0.15, centerY + scale * 0.2);
-                ctx.lineTo(centerX + scale * 0.05, centerY + scale * 0.15);
+                ctx.moveTo(centerX - scale * 0.15, centerY + scale * 0.3);
+                ctx.lineTo(centerX - scale * 0.05, centerY + scale * 0.3);
+                ctx.lineTo(centerX - scale * 0.08, centerY + scale * 0.4);
+                ctx.lineTo(centerX - scale * 0.18, centerY + scale * 0.4);
                 ctx.closePath();
                 ctx.fill();
 
-                // Piece 3 Hole
+                // Hole 4 (Neck Rectangle)
                 ctx.beginPath();
-                ctx.moveTo(centerX + scale * 0.05, centerY + scale * 0.25);
-                ctx.lineTo(centerX + scale * 0.15, centerY + scale * 0.3);
-                ctx.lineTo(centerX + scale * 0.1, centerY + scale * 0.4);
-                ctx.lineTo(centerX, centerY + scale * 0.35);
-                ctx.closePath();
+                ctx.rect(centerX + scale * 0.05, centerY - scale * 0.5, scale * 0.08, scale * 0.05);
                 ctx.fill();
-
-                // Piece 4 Hole
-                ctx.beginPath();
-                ctx.moveTo(centerX - scale * 0.15, centerY - scale * 0.4);
-                ctx.lineTo(centerX - scale * 0.05, centerY - scale * 0.45);
-                ctx.lineTo(centerX - scale * 0.05, centerY - scale * 0.55);
-                ctx.lineTo(centerX - scale * 0.15, centerY - scale * 0.5);
-                ctx.closePath();
-                ctx.fill();
+                // --- 수정된 깨진 부분 끝 ---
                 
                 ctx.globalCompositeOperation = 'source-over';
             }
         }
 
-        // 학 문양을 그리는 함수
         function drawInlaidPattern(ctx, scale, centerX, centerY) {
             const patternColor = '#F8F9F5';
             ctx.fillStyle = patternColor;
@@ -421,7 +415,6 @@
             drawCeladonBase(dustCtx, scale, centerX, centerY);
             drawInlaidPattern(dustCtx, scale, centerX, centerY);
             
-            // 먼지 조각 생성
             dustSpecks = [];
             for (let i = 0; i < 20; i++) {
                 const x = Math.random() * dustCanvas.width;
@@ -494,7 +487,89 @@
                 }
             }
         }
+        
+        function startDrag(e, piece, pieceData) {
+            if (pieceData.snapped) return;
 
+            e.preventDefault();
+            e.stopPropagation();
+
+            currentDraggingPiece = piece;
+            const isTouchEvent = e.type === 'touchstart';
+            const moveEvent = isTouchEvent ? 'touchmove' : 'mousemove';
+            const endEvent = isTouchEvent ? 'touchend' : 'mouseup';
+
+            const rect = piece.getBoundingClientRect();
+            const containerRect = piecesContainer.getBoundingClientRect();
+            
+            const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
+
+            startX = clientX - (rect.left - containerRect.left);
+            startY = clientY - (rect.top - containerRect.top);
+            
+            piece.style.zIndex = '100';
+            piece.classList.add('highlight');
+
+            document.addEventListener(moveEvent, drag, { passive: !isTouchEvent });
+            document.addEventListener(endEvent, endDrag);
+        }
+
+        function drag(e) {
+            if (!currentDraggingPiece) return;
+            
+            const isTouchEvent = e.type === 'touchmove';
+            if (isTouchEvent) e.preventDefault();
+
+            const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
+            
+            const newX = clientX - startX;
+            const newY = clientY - startY;
+            
+            currentDraggingPiece.style.left = `${newX}px`;
+            currentDraggingPiece.style.top = `${newY}px`;
+        }
+
+        function endDrag(e) {
+            if (!currentDraggingPiece) return;
+
+            const pieceDiv = currentDraggingPiece;
+            const pieceId = pieceDiv.id;
+            const pieceData = piecesData.find(d => d.id === pieceId);
+            
+            const isTouchEvent = e.type === 'touchend';
+            const moveEvent = isTouchEvent ? 'touchmove' : 'mousemove';
+            const endEvent = isTouchEvent ? 'touchend' : 'mouseup';
+
+            document.removeEventListener(moveEvent, drag);
+            document.removeEventListener(endEvent, endDrag);
+            
+            const rect = pieceDiv.getBoundingClientRect();
+            const containerRect = piecesContainer.getBoundingClientRect();
+            const currentX = rect.left - containerRect.left;
+            const currentY = rect.top - containerRect.top;
+
+            const targetX = pieceData.correctLeft;
+            const targetY = pieceData.correctTop;
+            const snapThreshold = 30;
+
+            if (Math.abs(currentX - targetX) < snapThreshold && Math.abs(currentY - targetY) < snapThreshold) {
+                pieceDiv.style.transform = `translate(0, 0)`;
+                pieceDiv.style.left = `${targetX}px`;
+                pieceDiv.style.top = `${targetY}px`;
+                pieceDiv.classList.add('snapped');
+                pieceDiv.style.cursor = 'default';
+                pieceData.snapped = true;
+                snappedPieces++;
+                updatePuzzleProgress();
+            }
+
+            pieceDiv.style.zIndex = '10';
+            pieceDiv.classList.remove('highlight');
+            currentDraggingPiece = null;
+        }
+        
         function initPuzzleStage() {
             currentStage = 2;
             subtitle.textContent = "조각 맞추기 단계";
@@ -512,69 +587,65 @@
             drawCeladonBase(potteryCtx, scale, centerX, centerY, true);
             drawInlaidPattern(potteryCtx, scale, centerX, centerY);
 
-            // 4개의 깨진 조각 데이터
+            // --- 수정된 조각 데이터 ---
             piecesData = [
-                // Piece 1
+                // Piece 1 (Top Left Square)
                 { 
                     id: 'p1', 
-                    correctTop: centerY - scale * 0.1, 
-                    correctLeft: centerX - scale * 0.2,
-                    width: scale * 0.15, height: scale * 0.15, 
+                    correctTop: centerY - scale * 0.25, 
+                    correctLeft: centerX - scale * 0.35,
+                    width: scale * 0.1, height: scale * 0.1, 
                     path: [
                         { type: 'moveTo', x: 0, y: 0 },
-                        { type: 'lineTo', x: scale * 0.05, y: scale * 0.05 },
-                        { type: 'lineTo', x: 0, y: scale * 0.15 },
-                        { type: 'lineTo', x: -scale * 0.1, y: scale * 0.05 },
-                        { type: 'lineTo', x: 0, y: 0 }
+                        { type: 'lineTo', x: scale * 0.1, y: 0 },
+                        { type: 'lineTo', x: scale * 0.1, y: scale * 0.1 },
+                        { type: 'lineTo', x: 0, y: scale * 0.1 }
                     ],
                     snapped: false
                 },
-                // Piece 2
+                // Piece 2 (Middle Right Triangle)
                 { 
                     id: 'p2', 
-                    correctTop: centerY + scale * 0.1, 
-                    correctLeft: centerX + scale * 0.05,
-                    width: scale * 0.15, height: scale * 0.15, 
+                    correctTop: centerY + scale * 0.05, 
+                    correctLeft: centerX + scale * 0.2,
+                    width: scale * 0.1, height: scale * 0.1, 
                     path: [
                         { type: 'moveTo', x: 0, y: 0 },
                         { type: 'lineTo', x: scale * 0.1, y: scale * 0.1 },
-                        { type: 'lineTo', x: scale * 0.05, y: scale * 0.2 },
-                        { type: 'lineTo', x: -scale * 0.05, y: scale * 0.15 },
-                        { type: 'lineTo', x: 0, y: 0 }
+                        { type: 'lineTo', x: 0, y: scale * 0.1 }
                     ],
                     snapped: false
                 },
-                // Piece 3
+                // Piece 3 (Bottom Left Trapezoid)
                 { 
                     id: 'p3', 
-                    correctTop: centerY + scale * 0.25, 
-                    correctLeft: centerX + scale * 0.05,
-                    width: scale * 0.15, height: scale * 0.15, 
+                    correctTop: centerY + scale * 0.3, 
+                    correctLeft: centerX - scale * 0.18,
+                    width: scale * 0.13, height: scale * 0.1, 
                     path: [
-                        { type: 'moveTo', x: 0, y: 0 },
-                        { type: 'lineTo', x: scale * 0.1, y: scale * 0.05 },
-                        { type: 'lineTo', x: scale * 0.05, y: scale * 0.15 },
-                        { type: 'lineTo', x: -scale * 0.05, y: scale * 0.1 },
-                        { type: 'lineTo', x: 0, y: 0 }
+                        { type: 'moveTo', x: scale * 0.03, y: 0 }, // top left
+                        { type: 'lineTo', x: scale * 0.13, y: 0 }, // top right
+                        { type: 'lineTo', x: scale * 0.1, y: scale * 0.1 }, // bottom right
+                        { type: 'lineTo', x: 0, y: scale * 0.1 }  // bottom left
                     ],
                     snapped: false
                 },
-                // Piece 4
+                // Piece 4 (Neck Rectangle)
                 {
                     id: 'p4',
-                    correctTop: centerY - scale * 0.55,
-                    correctLeft: centerX - scale * 0.05,
-                    width: scale * 0.1, height: scale * 0.15,
+                    correctTop: centerY - scale * 0.5,
+                    correctLeft: centerX + scale * 0.05,
+                    width: scale * 0.08, height: scale * 0.05,
                     path: [
                         { type: 'moveTo', x: 0, y: 0 },
-                        { type: 'lineTo', x: scale * 0.1, y: -scale * 0.05 },
-                        { type: 'lineTo', x: scale * 0.05, y: -scale * 0.1 },
-                        { type: 'lineTo', x: 0, y: -scale * 0.05 },
-                        { type: 'lineTo', x: 0, y: 0 }
+                        { type: 'lineTo', x: scale * 0.08, y: 0 },
+                        { type: 'lineTo', x: scale * 0.08, y: scale * 0.05 },
+                        { type: 'lineTo', x: 0, y: scale * 0.05 }
                     ],
                     snapped: false
                 }
             ];
+            // --- 수정된 조각 데이터 끝 ---
             totalPieces = piecesData.length;
 
             piecesData.forEach((p) => {
@@ -583,7 +654,6 @@
                 pieceDiv.classList.add('piece');
                 pieceDiv.style.width = `${p.width}px`;
                 pieceDiv.style.height = `${p.height}px`;
-                // 조각을 무작위 위치에 배치
                 pieceDiv.style.left = `${Math.random() * (potteryCanvas.width - p.width)}px`;
                 pieceDiv.style.top = `${potteryCanvas.height - p.height - Math.random() * 50}px`;
                 
@@ -595,86 +665,17 @@
                 const pieceCtx = pieceCanvas.getContext('2d');
                 pieceCtx.fillStyle = celadonColor;
                 pieceCtx.beginPath();
-                pieceCtx.moveTo(p.path[0].x, p.path[0].y);
-                for (let i = 1; i < p.path.length; i++) {
-                    const point = p.path[i];
-                    if (point.type === 'lineTo') {
-                        pieceCtx.lineTo(point.x, point.y);
-                    }
-                }
+                p.path.forEach((point, index) => {
+                    if (index === 0) pieceCtx.moveTo(point.x, point.y);
+                    else pieceCtx.lineTo(point.x, point.y);
+                });
                 pieceCtx.closePath();
                 pieceCtx.fill();
                 
                 piecesContainer.appendChild(pieceDiv);
                 
-                // 마우스 이벤트를 조각 자체에 연결합니다.
-                pieceDiv.addEventListener('mousedown', (e) => {
-                    // 이미 맞춰진 조각은 드래그할 수 없습니다.
-                    if (p.snapped) return;
-
-                    // 브라우저의 기본 드래그 동작을 막아 조각이 사라지는 문제를 해결합니다.
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    currentDraggingPiece = pieceDiv;
-                    const rect = pieceDiv.getBoundingClientRect();
-                    const containerRect = piecesContainer.getBoundingClientRect();
-                    
-                    // 드래그 시작 시 마우스 위치와 조각의 상대적 위치를 저장합니다.
-                    startX = e.clientX - rect.left + containerRect.left;
-                    startY = e.clientY - rect.top + containerRect.top;
-
-                    // 드래그 중인 조각을 맨 위로 올립니다.
-                    pieceDiv.style.zIndex = '100';
-                    pieceDiv.classList.add('highlight');
-                });
-            });
-            
-            const snapThreshold = 30;
-
-            // ** 수정된 부분: 드래그 이벤트를 문서 전체에 걸어 모든 조각을 제어합니다. **
-            document.addEventListener('mousemove', (e) => {
-                if (!currentDraggingPiece) return;
-                
-                e.preventDefault();
-                
-                const containerRect = piecesContainer.getBoundingClientRect();
-                const newX = e.clientX - startX;
-                const newY = e.clientY - startY;
-                
-                currentDraggingPiece.style.left = `${newX}px`;
-                currentDraggingPiece.style.top = `${newY}px`;
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (!currentDraggingPiece) return;
-                
-                const pieceDiv = currentDraggingPiece;
-                const pieceId = pieceDiv.id;
-                const pieceData = piecesData.find(d => d.id === pieceId);
-                
-                const rect = pieceDiv.getBoundingClientRect();
-                const containerRect = piecesContainer.getBoundingClientRect();
-                const currentX = rect.left - containerRect.left;
-                const currentY = rect.top - containerRect.top;
-
-                const targetX = pieceData.correctLeft;
-                const targetY = pieceData.correctTop;
-
-                if (Math.abs(currentX - targetX) < snapThreshold && Math.abs(currentY - targetY) < snapThreshold) {
-                    pieceDiv.style.transform = `translate(0, 0)`; // transform 초기화
-                    pieceDiv.style.left = `${targetX}px`;
-                    pieceDiv.style.top = `${targetY}px`;
-                    pieceDiv.classList.add('snapped');
-                    pieceDiv.style.cursor = 'default';
-                    pieceData.snapped = true;
-                    snappedPieces++;
-                    updatePuzzleProgress();
-                }
-
-                pieceDiv.style.zIndex = '10'; // z-index 원상 복귀
-                pieceDiv.classList.remove('highlight');
-                currentDraggingPiece = null; // 드래그 상태 해제
+                pieceDiv.addEventListener('mousedown', (e) => startDrag(e, pieceDiv, p));
+                pieceDiv.addEventListener('touchstart', (e) => startDrag(e, pieceDiv, p), { passive: false });
             });
         }
         
@@ -682,7 +683,6 @@
             const progress = (snappedPieces / totalPieces) * 100;
             puzzleProgressBar.style.width = `${progress}%`;
             if (snappedPieces === totalPieces) {
-                // 청자 전체를 다시 그려서 복원된 모습 보여주기
                 const scale = Math.min(potteryCanvas.width, potteryCanvas.height) * 0.5;
                 const centerX = potteryCanvas.width / 2;
                 const centerY = potteryCanvas.height / 2;
@@ -712,7 +712,6 @@
             drawCeladonBase(cracksCtx, scale, centerX, centerY);
             drawInlaidPattern(cracksCtx, scale, centerX, centerY);
             
-            // 금 데이터 정의 (시작점, 끝점)
             cracks = [
                 { id: 1, start: { x: centerX - scale * 0.2, y: centerY + scale * 0.2 }, end: { x: centerX - scale * 0.1, y: centerY + scale * 0.3 }, cleared: false },
                 { id: 2, start: { x: centerX - scale * 0.1, y: centerY + scale * 0.3 }, end: { x: centerX, y: centerY + scale * 0.2 }, cleared: false },
@@ -769,6 +768,13 @@
             }
 
             if (crackFilled) {
+                const scale = Math.min(cracksCanvas.width, cracksCanvas.height) * 0.5;
+                const centerX = cracksCanvas.width / 2;
+                const centerY = cracksCanvas.height / 2;
+                cracksCtx.clearRect(0, 0, cracksCanvas.width, cracksCanvas.height);
+                drawCeladonBase(cracksCtx, scale, centerX, centerY);
+                drawInlaidPattern(cracksCtx, scale, centerX, centerY);
+
                 drawCracks();
                 const progress = (cracksCleared / totalCracks) * 100;
                 cracksProgressBar.style.width = `${progress}%`;
@@ -813,3 +819,4 @@
 </script>
 </body>
 </html>
+
