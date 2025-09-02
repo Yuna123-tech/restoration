@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고려청자 복원 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f4f8;
+            color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .game-container {
+            max-width: 900px;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .game-header {
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #e2e8f0;
+            background-color: #f7fafc;
+        }
+        .game-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            width: 100%;
+        }
+        .game-canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            background-color: #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #cbd5e1;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .message-box {
+            background-color: #ffffff;
+            border: 2px solid #3498db;
+            color: #2980b9;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            animation: fadeIn 0.5s ease-out;
+            margin-top: 20px;
+            text-align: center;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .hidden {
+            display: none;
+        }
+        .progress-bar-container {
+            width: 80%;
+            height: 15px;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            transition: width 0.3s ease;
+        }
+        .piece {
+            position: absolute;
+            cursor: move;
+            transition: transform 0.2s;
+            z-index: 10;
+        }
+        .piece.snapped {
+            cursor: default;
+        }
+        .cracks-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.5s ease;
+        }
+        .success-content {
+            background: linear-gradient(135deg, #f3f9ff, #e3f2fd);
+            color: #2c3e50;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            max-width: 80%;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .highlight {
+            border: 2px dashed #ff0000;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="game-header">
+        <h1 class="text-3xl font-bold">고려청자 복원 게임</h1>
+        <p class="text-lg mt-2 text-gray-600" id="game-subtitle">먼지 털기 단계</p>
+    </div>
+
+    <div class="game-stage" id="stage-1">
+        <div class="message-box">먼지를 클릭하여 청자를 깨끗하게 만들어주세요.</div>
+        <div class="game-canvas-container mt-8">
+            <canvas id="dust-canvas"></canvas>
+        </div>
+        <div class="progress-bar-container">
+            <div id="dust-progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="button-group hidden" id="next-stage-button-group">
+            <button id="next-stage-btn" class="btn btn-primary">다음 단계로</button>
+        </div>
+    </div>
+
+    <div class="game-stage hidden" id="stage-2">
+        <div class="message-box">깨진 조각들을 제자리에 맞춰주세요.</div>
+        <div class="game-canvas-container mt-8">
+            <canvas id="pottery-canvas"></canvas>
+            <div id="pieces-container" class="absolute inset-0"></div>
+        </div>
+        <div class="progress-bar-container">
+            <div id="puzzle-progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="button-group hidden" id="next-stage-button-group-2">
+            <button id="next-stage-btn-2" class="btn btn-primary">다음 단계로</button>
+        </div>
+    </div>
+
+    <div class="game-stage hidden" id="stage-3">
+        <div class="message-box">금 간 부분을 클릭하여 메워주세요.</div>
+        <div class="game-canvas-container mt-8">
+            <canvas id="cracks-canvas" class="cracks-canvas"></canvas>
+        </div>
+        <div class="progress-bar-container">
+            <div id="cracks-progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="success-overlay" class="success-overlay hidden">
+    <div class="success-content">
+        <h2 class="text-4xl font-extrabold text-[#3498db]">복원 완료!</h2>
+        <p class="text-xl mt-4">당신은 고려청자 복원 전문가입니다!</p>
+        <p class="text-gray-500 mt-2">다음 유물 복원을 기다려주세요.</p>
+        <div class="mt-8 text-left">
+            <h3 class="text-2xl font-bold mb-2">고려청자는 무엇인가요?</h3>
+            <p>
+                고려청자(高麗靑磁)는 고려시대에 만들어진 푸른 빛의 도자기입니다. 
+                12세기 무렵 최고의 기술을 자랑하며 비취색을 띠는 아름다운 빛깔과 
+                다양한 문양으로 세계적인 예술품으로 인정받고 있습니다. 
+                특히 흙에 홈을 파고 다른 색의 흙을 채워 문양을 만드는 '상감 기법'은 
+                고려청자만의 독특하고 뛰어난 기술입니다.
+            </p>
+        </div>
+        <button id="restart-btn" class="btn btn-primary mt-8">다시 시작하기</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const stage1 = document.getElementById('stage-1');
+        const stage2 = document.getElementById('stage-2');
+        const stage3 = document.getElementById('stage-3');
+        const subtitle = document.getElementById('game-subtitle');
+        const nextBtn1 = document.getElementById('next-stage-btn');
+        const nextBtn2 = document.getElementById('next-stage-btn-2');
+        const nextStageBtnGroup2 = document.getElementById('next-stage-button-group-2');
+        const successOverlay = document.getElementById('success-overlay');
+        const restartBtn = document.getElementById('restart-btn');
+
+        const dustCanvas = document.getElementById('dust-canvas');
+        const dustCtx = dustCanvas.getContext('2d');
+        const dustProgressBar = document.getElementById('dust-progress-bar');
+        const nextStageBtnGroup = document.getElementById('next-stage-button-group');
+        
+        let dustSpecks = [];
+        let totalDust = 0;
+        let dustCleared = 0;
+        
+        const potteryCanvas = document.getElementById('pottery-canvas');
+        const potteryCtx = potteryCanvas.getContext('2d');
+        const piecesContainer = document.getElementById('pieces-container');
+        const puzzleProgressBar = document.getElementById('puzzle-progress-bar');
+        let snappedPieces = 0;
+        let totalPieces = 0;
+        let piecesData = [];
+        const celadonColor = '#73A99D';
+
+        const cracksCanvas = document.getElementById('cracks-canvas');
+        const cracksCtx = cracksCanvas.getContext('2d');
+        const cracksProgressBar = document.getElementById('cracks-progress-bar');
+        let cracks = [];
+        let cracksCleared = 0;
+        let totalCracks = 0;
+        const crackThickness = 10;
+        
+        let currentStage = 1;
+        
+        // ** 추가된 변수: 현재 드래그 중인 조각을 추적합니다. **
+        let currentDraggingPiece = null;
+        let startX, startY;
+
+        function setCanvasSize() {
+            const container = dustCanvas.parentElement;
+            dustCanvas.width = container.clientWidth;
+            dustCanvas.height = container.clientHeight;
+            potteryCanvas.width = container.clientWidth;
+            potteryCanvas.height = container.clientHeight;
+            cracksCanvas.width = container.clientWidth;
+            cracksCanvas.height = container.clientHeight;
+            if (currentStage === 1) initDustStage();
+            if (currentStage === 2) initPuzzleStage();
+            if (currentStage === 3) initCracksStage();
+        }
+
+        window.addEventListener('resize', setCanvasSize);
+        
+        // 고려청자 본체와 문양을 그리는 함수
+        function drawCeladonBase(ctx, scale, centerX, centerY, drawBroken = false) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            
+            ctx.fillStyle = celadonColor;
+            
+            ctx.beginPath();
+            // 좌측 윤곽선 (베지어 곡선)
+            ctx.moveTo(centerX - scale * 0.25, centerY + scale * 0.45);
+            ctx.bezierCurveTo(
+                centerX - scale * 0.4, centerY + scale * 0.1,
+                centerX - scale * 0.45, centerY - scale * 0.2,
+                centerX - scale * 0.2, centerY - scale * 0.45
+            );
+            ctx.bezierCurveTo(
+                centerX - scale * 0.1, centerY - scale * 0.55,
+                centerX - scale * 0.05, centerY - scale * 0.6,
+                centerX - scale * 0.1, centerY - scale * 0.7
+            );
+            
+            // 우측 윤곽선 (베지어 곡선)
+            ctx.lineTo(centerX + scale * 0.1, centerY - scale * 0.7);
+            ctx.bezierCurveTo(
+                centerX + scale * 0.05, centerY - scale * 0.6,
+                centerX + scale * 0.1, centerY - scale * 0.55,
+                centerX + scale * 0.2, centerY - scale * 0.45
+            );
+            ctx.bezierCurveTo(
+                centerX + scale * 0.45, centerY - scale * 0.2,
+                centerX + scale * 0.4, centerY + scale * 0.1,
+                centerX + scale * 0.25, centerY + scale * 0.45
+            );
+            ctx.closePath();
+            ctx.fill();
+
+            // 바닥 부분
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + scale * 0.45, scale * 0.25, scale * 0.05, 0, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // 윗 부분
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY - scale * 0.7, scale * 0.1, scale * 0.02, 0, 0, 2 * Math.PI);
+            ctx.fill();
+
+            if (drawBroken) {
+                // 깨진 조각을 그리는 부분 (빈 공간)
+                ctx.globalCompositeOperation = 'destination-out';
+                
+                // Piece 1 Hole
+                ctx.beginPath();
+                ctx.moveTo(centerX - scale * 0.2, centerY - scale * 0.1);
+                ctx.lineTo(centerX - scale * 0.25, centerY - scale * 0.05);
+                ctx.lineTo(centerX - scale * 0.2, centerY + scale * 0.05);
+                ctx.lineTo(centerX - scale * 0.1, centerY);
+                ctx.closePath();
+                ctx.fill();
+
+                // Piece 2 Hole
+                ctx.beginPath();
+                ctx.moveTo(centerX + scale * 0.1, centerY);
+                ctx.lineTo(centerX + scale * 0.2, centerY + scale * 0.1);
+                ctx.lineTo(centerX + scale * 0.15, centerY + scale * 0.2);
+                ctx.lineTo(centerX + scale * 0.05, centerY + scale * 0.15);
+                ctx.closePath();
+                ctx.fill();
+
+                // Piece 3 Hole
+                ctx.beginPath();
+                ctx.moveTo(centerX + scale * 0.05, centerY + scale * 0.25);
+                ctx.lineTo(centerX + scale * 0.15, centerY + scale * 0.3);
+                ctx.lineTo(centerX + scale * 0.1, centerY + scale * 0.4);
+                ctx.lineTo(centerX, centerY + scale * 0.35);
+                ctx.closePath();
+                ctx.fill();
+
+                // Piece 4 Hole
+                ctx.beginPath();
+                ctx.moveTo(centerX - scale * 0.15, centerY - scale * 0.4);
+                ctx.lineTo(centerX - scale * 0.05, centerY - scale * 0.45);
+                ctx.lineTo(centerX - scale * 0.05, centerY - scale * 0.55);
+                ctx.lineTo(centerX - scale * 0.15, centerY - scale * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.globalCompositeOperation = 'source-over';
+            }
+        }
+
+        // 학 문양을 그리는 함수
+        function drawInlaidPattern(ctx, scale, centerX, centerY) {
+            const patternColor = '#F8F9F5';
+            ctx.fillStyle = patternColor;
+            
+            const numCranes = 4;
+            for (let i = 0; i < numCranes; i++) {
+                const angle = (i / numCranes) * Math.PI * 2;
+                const x = centerX + Math.cos(angle) * scale * 0.3;
+                const y = centerY + Math.sin(angle) * scale * 0.2;
+
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 10, y + 5);
+                ctx.lineTo(x + 15, y);
+                ctx.lineTo(x, y - 10);
+                ctx.lineTo(x - 15, y);
+                ctx.lineTo(x - 10, y + 5);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        function initDustStage() {
+            currentStage = 1;
+            subtitle.textContent = "먼지 털기 단계";
+            stage1.classList.remove('hidden');
+            stage2.classList.add('hidden');
+            stage3.classList.add('hidden');
+            dustCleared = 0;
+            dustProgressBar.style.width = '0%';
+            nextStageBtnGroup.classList.add('hidden');
+            
+            const scale = Math.min(dustCanvas.width, dustCanvas.height) * 0.5;
+            const centerX = dustCanvas.width / 2;
+            const centerY = dustCanvas.height / 2;
+
+            drawCeladonBase(dustCtx, scale, centerX, centerY);
+            drawInlaidPattern(dustCtx, scale, centerX, centerY);
+            
+            // 먼지 조각 생성
+            dustSpecks = [];
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * dustCanvas.width;
+                const y = Math.random() * dustCanvas.height;
+                const size = 10 + Math.random() * 20;
+                dustSpecks.push({ x, y, size, removed: false });
+            }
+            totalDust = dustSpecks.length;
+            drawDustSpecks();
+
+            dustCanvas.addEventListener('mousedown', clickDust);
+            dustCanvas.addEventListener('touchstart', clickDust);
+        }
+
+        function drawDustSpecks() {
+            dustCtx.globalCompositeOperation = 'source-over';
+            dustCtx.fillStyle = '#6a6a6a';
+            dustSpecks.forEach(speck => {
+                if (!speck.removed) {
+                    dustCtx.beginPath();
+                    dustCtx.arc(speck.x, speck.y, speck.size, 0, 2 * Math.PI);
+                    dustCtx.fill();
+                }
+            });
+        }
+        
+        function clickDust(e) {
+            const rect = dustCanvas.getBoundingClientRect();
+            let x, y;
+            if (e.touches) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+
+            let speckRemoved = false;
+            for (let i = 0; i < dustSpecks.length; i++) {
+                const speck = dustSpecks[i];
+                if (!speck.removed) {
+                    const distance = Math.sqrt(Math.pow(x - speck.x, 2) + Math.pow(y - speck.y, 2));
+                    if (distance <= speck.size) {
+                        speck.removed = true;
+                        dustCleared++;
+                        speckRemoved = true;
+                        break;
+                    }
+                }
+            }
+
+            if (speckRemoved) {
+                dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
+                const scale = Math.min(dustCanvas.width, dustCanvas.height) * 0.5;
+                const centerX = dustCanvas.width / 2;
+                const centerY = dustCanvas.height / 2;
+                drawCeladonBase(dustCtx, scale, centerX, centerY);
+                drawInlaidPattern(dustCtx, scale, centerX, centerY);
+                drawDustSpecks();
+
+                const progress = (dustCleared / totalDust) * 100;
+                dustProgressBar.style.width = `${progress}%`;
+
+                if (dustCleared === totalDust) {
+                    dustCanvas.removeEventListener('mousedown', clickDust);
+                    dustCanvas.removeEventListener('touchstart', clickDust);
+                    setTimeout(() => {
+                        nextStageBtnGroup.classList.remove('hidden');
+                    }, 500);
+                }
+            }
+        }
+
+        function initPuzzleStage() {
+            currentStage = 2;
+            subtitle.textContent = "조각 맞추기 단계";
+            stage1.classList.add('hidden');
+            stage2.classList.remove('hidden');
+            snappedPieces = 0;
+            puzzleProgressBar.style.width = '0%';
+            nextStageBtnGroup2.classList.add('hidden');
+            piecesContainer.innerHTML = '';
+            
+            const scale = Math.min(potteryCanvas.width, potteryCanvas.height) * 0.5;
+            const centerX = potteryCanvas.width / 2;
+            const centerY = potteryCanvas.height / 2;
+
+            drawCeladonBase(potteryCtx, scale, centerX, centerY, true);
+            drawInlaidPattern(potteryCtx, scale, centerX, centerY);
+
+            // 4개의 깨진 조각 데이터
+            piecesData = [
+                // Piece 1
+                { 
+                    id: 'p1', 
+                    correctTop: centerY - scale * 0.1, 
+                    correctLeft: centerX - scale * 0.2,
+                    width: scale * 0.15, height: scale * 0.15, 
+                    path: [
+                        { type: 'moveTo', x: 0, y: 0 },
+                        { type: 'lineTo', x: scale * 0.05, y: scale * 0.05 },
+                        { type: 'lineTo', x: 0, y: scale * 0.15 },
+                        { type: 'lineTo', x: -scale * 0.1, y: scale * 0.05 },
+                        { type: 'lineTo', x: 0, y: 0 }
+                    ],
+                    snapped: false
+                },
+                // Piece 2
+                { 
+                    id: 'p2', 
+                    correctTop: centerY + scale * 0.1, 
+                    correctLeft: centerX + scale * 0.05,
+                    width: scale * 0.15, height: scale * 0.15, 
+                    path: [
+                        { type: 'moveTo', x: 0, y: 0 },
+                        { type: 'lineTo', x: scale * 0.1, y: scale * 0.1 },
+                        { type: 'lineTo', x: scale * 0.05, y: scale * 0.2 },
+                        { type: 'lineTo', x: -scale * 0.05, y: scale * 0.15 },
+                        { type: 'lineTo', x: 0, y: 0 }
+                    ],
+                    snapped: false
+                },
+                // Piece 3
+                { 
+                    id: 'p3', 
+                    correctTop: centerY + scale * 0.25, 
+                    correctLeft: centerX + scale * 0.05,
+                    width: scale * 0.15, height: scale * 0.15, 
+                    path: [
+                        { type: 'moveTo', x: 0, y: 0 },
+                        { type: 'lineTo', x: scale * 0.1, y: scale * 0.05 },
+                        { type: 'lineTo', x: scale * 0.05, y: scale * 0.15 },
+                        { type: 'lineTo', x: -scale * 0.05, y: scale * 0.1 },
+                        { type: 'lineTo', x: 0, y: 0 }
+                    ],
+                    snapped: false
+                },
+                // Piece 4
+                {
+                    id: 'p4',
+                    correctTop: centerY - scale * 0.55,
+                    correctLeft: centerX - scale * 0.05,
+                    width: scale * 0.1, height: scale * 0.15,
+                    path: [
+                        { type: 'moveTo', x: 0, y: 0 },
+                        { type: 'lineTo', x: scale * 0.1, y: -scale * 0.05 },
+                        { type: 'lineTo', x: scale * 0.05, y: -scale * 0.1 },
+                        { type: 'lineTo', x: 0, y: -scale * 0.05 },
+                        { type: 'lineTo', x: 0, y: 0 }
+                    ],
+                    snapped: false
+                }
+            ];
+            totalPieces = piecesData.length;
+
+            piecesData.forEach((p) => {
+                const pieceDiv = document.createElement('div');
+                pieceDiv.id = p.id;
+                pieceDiv.classList.add('piece');
+                pieceDiv.style.width = `${p.width}px`;
+                pieceDiv.style.height = `${p.height}px`;
+                // 조각을 무작위 위치에 배치
+                pieceDiv.style.left = `${Math.random() * (potteryCanvas.width - p.width)}px`;
+                pieceDiv.style.top = `${potteryCanvas.height - p.height - Math.random() * 50}px`;
+                
+                const pieceCanvas = document.createElement('canvas');
+                pieceCanvas.width = p.width;
+                pieceCanvas.height = p.height;
+                pieceDiv.appendChild(pieceCanvas);
+                
+                const pieceCtx = pieceCanvas.getContext('2d');
+                pieceCtx.fillStyle = celadonColor;
+                pieceCtx.beginPath();
+                pieceCtx.moveTo(p.path[0].x, p.path[0].y);
+                for (let i = 1; i < p.path.length; i++) {
+                    const point = p.path[i];
+                    if (point.type === 'lineTo') {
+                        pieceCtx.lineTo(point.x, point.y);
+                    }
+                }
+                pieceCtx.closePath();
+                pieceCtx.fill();
+                
+                piecesContainer.appendChild(pieceDiv);
+                
+                // 마우스 이벤트를 조각 자체에 연결합니다.
+                pieceDiv.addEventListener('mousedown', (e) => {
+                    // 이미 맞춰진 조각은 드래그할 수 없습니다.
+                    if (p.snapped) return;
+
+                    // 브라우저의 기본 드래그 동작을 막아 조각이 사라지는 문제를 해결합니다.
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    currentDraggingPiece = pieceDiv;
+                    const rect = pieceDiv.getBoundingClientRect();
+                    const containerRect = piecesContainer.getBoundingClientRect();
+                    
+                    // 드래그 시작 시 마우스 위치와 조각의 상대적 위치를 저장합니다.
+                    startX = e.clientX - rect.left + containerRect.left;
+                    startY = e.clientY - rect.top + containerRect.top;
+
+                    // 드래그 중인 조각을 맨 위로 올립니다.
+                    pieceDiv.style.zIndex = '100';
+                    pieceDiv.classList.add('highlight');
+                });
+            });
+            
+            const snapThreshold = 30;
+
+            // ** 수정된 부분: 드래그 이벤트를 문서 전체에 걸어 모든 조각을 제어합니다. **
+            document.addEventListener('mousemove', (e) => {
+                if (!currentDraggingPiece) return;
+                
+                e.preventDefault();
+                
+                const containerRect = piecesContainer.getBoundingClientRect();
+                const newX = e.clientX - startX;
+                const newY = e.clientY - startY;
+                
+                currentDraggingPiece.style.left = `${newX}px`;
+                currentDraggingPiece.style.top = `${newY}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!currentDraggingPiece) return;
+                
+                const pieceDiv = currentDraggingPiece;
+                const pieceId = pieceDiv.id;
+                const pieceData = piecesData.find(d => d.id === pieceId);
+                
+                const rect = pieceDiv.getBoundingClientRect();
+                const containerRect = piecesContainer.getBoundingClientRect();
+                const currentX = rect.left - containerRect.left;
+                const currentY = rect.top - containerRect.top;
+
+                const targetX = pieceData.correctLeft;
+                const targetY = pieceData.correctTop;
+
+                if (Math.abs(currentX - targetX) < snapThreshold && Math.abs(currentY - targetY) < snapThreshold) {
+                    pieceDiv.style.transform = `translate(0, 0)`; // transform 초기화
+                    pieceDiv.style.left = `${targetX}px`;
+                    pieceDiv.style.top = `${targetY}px`;
+                    pieceDiv.classList.add('snapped');
+                    pieceDiv.style.cursor = 'default';
+                    pieceData.snapped = true;
+                    snappedPieces++;
+                    updatePuzzleProgress();
+                }
+
+                pieceDiv.style.zIndex = '10'; // z-index 원상 복귀
+                pieceDiv.classList.remove('highlight');
+                currentDraggingPiece = null; // 드래그 상태 해제
+            });
+        }
+        
+        function updatePuzzleProgress() {
+            const progress = (snappedPieces / totalPieces) * 100;
+            puzzleProgressBar.style.width = `${progress}%`;
+            if (snappedPieces === totalPieces) {
+                // 청자 전체를 다시 그려서 복원된 모습 보여주기
+                const scale = Math.min(potteryCanvas.width, potteryCanvas.height) * 0.5;
+                const centerX = potteryCanvas.width / 2;
+                const centerY = potteryCanvas.height / 2;
+                drawCeladonBase(potteryCtx, scale, centerX, centerY, false);
+                drawInlaidPattern(potteryCtx, scale, centerX, centerY);
+
+                nextStageBtnGroup2.classList.remove('hidden');
+            }
+        }
+
+        nextBtn2.addEventListener('click', () => {
+            stage2.classList.add('hidden');
+            initCracksStage();
+        });
+
+        function initCracksStage() {
+            currentStage = 3;
+            subtitle.textContent = "금 다듬기 단계";
+            stage3.classList.remove('hidden');
+            cracksCleared = 0;
+            cracksProgressBar.style.width = '0%';
+            
+            const scale = Math.min(cracksCanvas.width, cracksCanvas.height) * 0.5;
+            const centerX = cracksCanvas.width / 2;
+            const centerY = cracksCanvas.height / 2;
+            
+            drawCeladonBase(cracksCtx, scale, centerX, centerY);
+            drawInlaidPattern(cracksCtx, scale, centerX, centerY);
+            
+            // 금 데이터 정의 (시작점, 끝점)
+            cracks = [
+                { id: 1, start: { x: centerX - scale * 0.2, y: centerY + scale * 0.2 }, end: { x: centerX - scale * 0.1, y: centerY + scale * 0.3 }, cleared: false },
+                { id: 2, start: { x: centerX - scale * 0.1, y: centerY + scale * 0.3 }, end: { x: centerX, y: centerY + scale * 0.2 }, cleared: false },
+                { id: 3, start: { x: centerX + scale * 0.1, y: centerY - scale * 0.1 }, end: { x: centerX, y: centerY - scale * 0.2 }, cleared: false },
+                { id: 4, start: { x: centerX, y: centerY - scale * 0.2 }, end: { x: centerX - scale * 0.1, y: centerY - scale * 0.15 }, cleared: false },
+                { id: 5, start: { x: centerX - scale * 0.25, y: centerY - scale * 0.3 }, end: { x: centerX - scale * 0.15, y: centerY - scale * 0.4 }, cleared: false },
+                { id: 6, start: { x: centerX + scale * 0.15, y: centerY + scale * 0.1 }, end: { x: centerX + scale * 0.25, y: centerY + scale * 0.2 }, cleared: false },
+                { id: 7, start: { x: centerX + scale * 0.25, y: centerY + scale * 0.2 }, end: { x: centerX + scale * 0.1, y: centerY + scale * 0.25 }, cleared: false },
+                { id: 8, start: { x: centerX - scale * 0.1, y: centerY - scale * 0.6 }, end: { x: centerX - scale * 0.05, y: centerY - scale * 0.65 }, cleared: false }
+            ];
+            totalCracks = cracks.length;
+            drawCracks();
+            cracksCanvas.addEventListener('mousedown', clickCrack);
+            cracksCanvas.addEventListener('touchstart', clickCrack);
+        }
+
+        function drawCracks() {
+            cracksCtx.globalCompositeOperation = 'source-over';
+            cracksCtx.lineWidth = crackThickness;
+            cracksCtx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+            cracks.forEach(crack => {
+                if (!crack.cleared) {
+                    cracksCtx.beginPath();
+                    cracksCtx.moveTo(crack.start.x, crack.start.y);
+                    cracksCtx.lineTo(crack.end.x, crack.end.y);
+                    cracksCtx.stroke();
+                }
+            });
+        }
+        
+        function clickCrack(e) {
+            const rect = cracksCanvas.getBoundingClientRect();
+            let x, y;
+            if (e.touches) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+
+            let crackFilled = false;
+            for (let i = 0; i < cracks.length; i++) {
+                const crack = cracks[i];
+                if (!crack.cleared) {
+                    const distFromPointToLine = pointToLineDistance(x, y, crack.start.x, crack.start.y, crack.end.x, crack.end.y);
+                    if (distFromPointToLine < crackThickness * 0.7) {
+                        crack.cleared = true;
+                        cracksCleared++;
+                        crackFilled = true;
+                        break;
+                    }
+                }
+            }
+
+            if (crackFilled) {
+                drawCracks();
+                const progress = (cracksCleared / totalCracks) * 100;
+                cracksProgressBar.style.width = `${progress}%`;
+
+                if (cracksCleared === totalCracks) {
+                    cracksCanvas.removeEventListener('mousedown', clickCrack);
+                    cracksCanvas.removeEventListener('touchstart', clickCrack);
+                    setTimeout(() => {
+                        showSuccessScreen();
+                    }, 500);
+                }
+            }
+        }
+        
+        function pointToLineDistance(px, py, x1, y1, x2, y2) {
+            const L2 = (x2 - x1)**2 + (y2 - y1)**2;
+            if (L2 === 0) return Math.sqrt((px - x1)**2 + (py - y1)**2);
+            const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / L2;
+            if (t < 0) return Math.sqrt((px - x1)**2 + (py - y1)**2);
+            if (t > 1) return Math.sqrt((px - x2)**2 + (py - y2)**2);
+            const projectionX = x1 + t * (x2 - x1);
+            const projectionY = y1 + t * (y2 - y1);
+            return Math.sqrt((px - projectionX)**2 + (py - projectionY)**2);
+        }
+
+        function showSuccessScreen() {
+            successOverlay.classList.remove('hidden');
+        }
+
+        restartBtn.addEventListener('click', () => {
+            successOverlay.classList.add('hidden');
+            setCanvasSize();
+        });
+
+        nextBtn1.addEventListener('click', () => {
+            stage1.classList.add('hidden');
+            initPuzzleStage();
+        });
+        
+        setCanvasSize();
+    });
+</script>
+</body>
+</html>
